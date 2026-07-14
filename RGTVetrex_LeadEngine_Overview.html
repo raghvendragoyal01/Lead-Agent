@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>RGTVetrex_LeadEngine_Overview.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="rgtvetrex--ai-lead-outbound-engine">RGTVetrex — AI Lead Outbound Engine</h1>
+<h3 id="product-overview--technical-documentation">Product Overview &amp; Technical Documentation</h3>
+<hr>
+<h2 id="what-is-this-system">What is this system?</h2>
+<p>Ek fully automated AI-powered outbound sales engine jo aapke liye automatically leads dhundta hai, qualify karta hai, personalized emails likhta hai, aur send karta hai — bina kisi manual kaam ke.</p>
+<p><strong>Simple words mein:</strong> Aap bas batao &quot;mujhe Mumbai ke SaaS startups ke founders chahiye&quot; — system baaki sab khud karta hai.</p>
+<hr>
+<h2 id="complete-pipeline-flow">Complete Pipeline Flow</h2>
+<pre class="hljs"><code><div>Client gives Campaign Input
+           ↓
+┌─────────────────────────────────────────────────────┐
+│  STAGE 1 — INTELLIGENT SEARCH                        │
+│  AI generates 5 targeted search queries              │
+│  → Tinyfish Search API                               │
+│  → DuckDuckGo fallback                               │
+│  → Google Dorking (site:linkedin.com, filetype:pdf)  │
+└─────────────────────────────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────────────────┐
+│  STAGE 2 — MULTI-SOURCE LEAD DISCOVERY               │
+│  Source 1: Company Websites (official pages)         │
+│  Source 2: LinkedIn X-Ray (via Google cache)         │
+│  Source 3: Reddit (official API — PRAW)              │
+│  Source 4: Quora (public answer pages)               │
+│  Source 5: PDF Staff Directories                     │
+│  Source 6: Instagram public bios                     │
+└─────────────────────────────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────────────────┐
+│  STAGE 3 — UNIVERSAL ANTI-BOT SCRAPER (5 Tiers)     │
+│                                                      │
+│  Tier 1 → Tinyfish Fetch API (fastest)               │
+│  Tier 2 → curl_cffi (TLS/JA3 fingerprint spoof)      │
+│           mimics real Chrome at network level         │
+│  Tier 3 → Camoufox (anti-detect Firefox browser)     │
+│           beats Cloudflare, removes webdriver flag   │
+│  Tier 4 → Playwright + Stealth patches               │
+│           full JS rendering + Bézier mouse paths     │
+│  Tier 5 → BeautifulSoup deep extraction (7 layers)   │
+│                                                      │
+│  + Session Cookie Cache (reuse verified sessions)    │
+│  + Hidden JSON API Detection (10x faster when found) │
+└─────────────────────────────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────────────────┐
+│  STAGE 4 — AI EXTRACTION                             │
+│  Gemini/Llama reads scraped content                  │
+│  Extracts: Name, Email, Phone, Title, Company        │
+│  Fixes obfuscated emails: &quot;name at domain dot com&quot;   │
+│  Validates email format                              │
+└─────────────────────────────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────────────────┐
+│  STAGE 5 — DEDUPLICATION &amp; VALIDATION               │
+│  → Root domain dedup (same company = 1 lead)        │
+│  → Email format validation                          │
+│  → Neo4j graph database check (already contacted?)  │
+│  → Best contact selection (named person &gt; generic)  │
+└─────────────────────────────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────────────────┐
+│  STAGE 6 — AI QUALIFIER                              │
+│  LLM reviews and standardizes each lead             │
+│  Confidence scoring (0.0 → 1.0)                     │
+│  Drops only malformed/no-contact-info leads         │
+└─────────────────────────────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────────────────┐
+│  STAGE 7 — HUMAN APPROVAL GATE  ← CLIENT REVIEWS    │
+│  Dashboard shows all qualified leads                │
+│  Client approves / rejects individual leads         │
+│  AI pre-generates personalized email draft          │
+└─────────────────────────────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────────────────┐
+│  STAGE 8 — PERSONALIZED EMAIL DRAFTING              │
+│  Llama 70B writes hyper-personalized cold email     │
+│  Uses company description for personalization       │
+│  RAG system pulls successful past templates         │
+│  Under 100 words, professional tone                 │
+└─────────────────────────────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────────────────┐
+│  STAGE 9 — AUTOMATED EMAIL SENDING                  │
+│  Sends via configured SMTP                          │
+│  2-second rate limit between emails                 │
+│  Logs every send to database                        │
+└─────────────────────────────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────────────────┐
+│  STAGE 10 — REPLY MONITORING &amp; FOLLOW-UPS           │
+│  Monitors inbox for replies                         │
+│  Auto-schedules follow-up sequences                 │
+│  Tracks: sent / replied / bounced / positive        │
+└─────────────────────────────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────────────────┐
+│  STAGE 11 — DASHBOARD &amp; ANALYTICS                   │
+│  Live campaign status                               │
+│  Lead growth charts                                 │
+│  Industry distribution                              │
+│  Success rate metrics                               │
+└─────────────────────────────────────────────────────┘
+</div></code></pre>
+<hr>
+<h2 id="tech-stack">Tech Stack</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Technology</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backend</td>
+<td>FastAPI (Python)</td>
+<td>REST API, campaign management</td>
+</tr>
+<tr>
+<td>Frontend</td>
+<td>React + TypeScript + Vite</td>
+<td>Dashboard UI</td>
+</tr>
+<tr>
+<td>Primary LLM</td>
+<td>NVIDIA Llama 3.1 70B</td>
+<td>Extraction, drafting</td>
+</tr>
+<tr>
+<td>Fallback LLMs</td>
+<td>Groq, OpenRouter, Gemini 2.5 Flash</td>
+<td>Reliability chain</td>
+</tr>
+<tr>
+<td>Graph DB</td>
+<td>Neo4j Aura</td>
+<td>Lead memory, deduplication</td>
+</tr>
+<tr>
+<td>Vector DB</td>
+<td>Qdrant Cloud</td>
+<td>Email template RAG</td>
+</tr>
+<tr>
+<td>SQL DB</td>
+<td>Supabase (PostgreSQL)</td>
+<td>Users, campaigns, tasks, notes</td>
+</tr>
+<tr>
+<td>Scraping Tier 1</td>
+<td>Tinyfish Fetch API</td>
+<td>Cloud-based bypass scraper</td>
+</tr>
+<tr>
+<td>Scraping Tier 2</td>
+<td>curl_cffi</td>
+<td>TLS/JA3 fingerprint spoofing</td>
+</tr>
+<tr>
+<td>Scraping Tier 3</td>
+<td>Camoufox</td>
+<td>Anti-detect Firefox browser</td>
+</tr>
+<tr>
+<td>Scraping Tier 4</td>
+<td>Playwright + Stealth</td>
+<td>Headless Chromium + stealth patches</td>
+</tr>
+<tr>
+<td>Scraping Tier 5</td>
+<td>BeautifulSoup (7-layer)</td>
+<td>Static HTML deep extraction</td>
+</tr>
+<tr>
+<td>Search</td>
+<td>Tinyfish Search + DDG</td>
+<td>URL discovery</td>
+</tr>
+<tr>
+<td>Email</td>
+<td>SMTP (Gmail)</td>
+<td>Outbound email sending</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="scraper--full-technical-details">Scraper — Full Technical Details</h2>
+<h3 id="5-tier-anti-bot-strategy">5-Tier Anti-Bot Strategy</h3>
+<h4 id="tier-1--tinyfish-fetch-api">Tier 1 — Tinyfish Fetch API</h4>
+<ul>
+<li>Cloud-based fetcher with built-in bot bypass</li>
+<li>Returns clean markdown — no HTML parsing needed</li>
+<li>Fastest tier (~1-2 seconds per page)</li>
+</ul>
+<h4 id="tier-2--curlcffi-tlsja3-fingerprint-spoof">Tier 2 — curl_cffi (TLS/JA3 Fingerprint Spoof)</h4>
+<ul>
+<li>Python's default <code>requests</code> library has a unique TLS handshake that Cloudflare detects instantly</li>
+<li><code>curl_cffi</code> compiles low-level curl code that sends Chrome 120/124/131 or Safari 17/18 TLS fingerprints</li>
+<li>Sites see a real browser at the TCP network level</li>
+<li>Bypasses ~60% of bot blocks without launching any browser</li>
+<li>Profiles rotated: <code>chrome120</code>, <code>chrome124</code>, <code>chrome131</code>, <code>safari17_0</code>, <code>safari18_0</code></li>
+</ul>
+<h4 id="tier-3--camoufox-anti-detect-firefox">Tier 3 — Camoufox (Anti-Detect Firefox)</h4>
+<ul>
+<li>Custom Firefox build with stealth patches at the engine level</li>
+<li>Removes automation indicators (<code>navigator.webdriver</code>, canvas fingerprint, WebGL leaks)</li>
+<li>Handles Cloudflare Turnstile and complex JS-rendered pages</li>
+<li>Best for Indian government/education websites</li>
+</ul>
+<h4 id="tier-4--playwright--stealth">Tier 4 — Playwright + Stealth</h4>
+<ul>
+<li>Full headless Chromium browser</li>
+<li>Stealth JS injected before every page load:
+<ul>
+<li>Removes <code>navigator.webdriver = true</code> flag</li>
+<li>Fakes <code>navigator.plugins</code> (5 plugins)</li>
+<li>Fakes <code>navigator.languages</code></li>
+<li>Adds <code>window.chrome</code> object</li>
+</ul>
+</li>
+<li><strong>Bézier mouse paths</strong> — curved organic mouse movement, not straight lines</li>
+<li><strong>Poisson-distributed delays</strong> — random 1-7 second waits, not fixed <code>sleep(2)</code></li>
+<li>Heavy assets (images, fonts, videos) blocked to save bandwidth</li>
+</ul>
+<h4 id="tier-5--beautifulsoup-7-layer-extraction">Tier 5 — BeautifulSoup 7-Layer Extraction</h4>
+<ol>
+<li><code>mailto:</code> and <code>tel:</code> links → direct email/phone extraction</li>
+<li>Meta tags (OG, Twitter Card, schema.org, author)</li>
+<li>JSON-LD structured data (<code>&lt;script type=&quot;application/ld+json&quot;&gt;</code>)</li>
+<li>Microdata (<code>itemprop</code> attributes — contact schemas)</li>
+<li>HTML comments containing <code>@</code> or contact keywords</li>
+<li><code>&lt;address&gt;</code> HTML tags (spec-defined contact blocks)</li>
+<li>Visible text keyword scan (email, phone, contact, director etc.)</li>
+</ol>
+<h3 id="session-cookie-cache">Session Cookie Cache</h3>
+<ul>
+<li>After Camoufox/Playwright solves a Cloudflare challenge, cookies are cached for 30 minutes</li>
+<li>Subsequent pages on the same domain use cached cookies with curl_cffi (fast path)</li>
+<li>Only falls back to browser if cookies expire</li>
+<li><strong>Result:</strong> First visit = 5-8 seconds, subsequent pages = 1-2 seconds</li>
+</ul>
+<h3 id="hidden-json-api-detection">Hidden JSON API Detection</h3>
+<ul>
+<li>Before scraping any site, checks 10 common API paths:
+<ul>
+<li><code>/api/contacts</code>, <code>/api/staff</code>, <code>/api/team</code></li>
+<li><code>/wp-json/wp/v2/users</code></li>
+<li><code>/api/members</code>, <code>/.json</code>, <code>/data.json</code></li>
+</ul>
+</li>
+<li>If site returns JSON directly → 10x faster, 100% accurate, no HTML parsing needed</li>
+</ul>
+<hr>
+<h2 id="lead-sources">Lead Sources</h2>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Method</th>
+<th>What You Get</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Company Websites</td>
+<td>5-tier scraper</td>
+<td>Name, email, phone, title</td>
+</tr>
+<tr>
+<td>LinkedIn X-Ray</td>
+<td><code>site:linkedin.com/in</code> via DDG</td>
+<td>Name, title, company, LinkedIn URL, email (if public)</td>
+</tr>
+<tr>
+<td>Google Dorking</td>
+<td>DDG + LLM parsing</td>
+<td>Emails from social bios, PDFs, contact pages</td>
+</tr>
+<tr>
+<td>Reddit</td>
+<td>PRAW official API</td>
+<td>Business owners who posted contact info</td>
+</tr>
+<tr>
+<td>Quora</td>
+<td>Playwright scraping</td>
+<td>Professionals who listed email in bio/answers</td>
+</tr>
+<tr>
+<td>Instagram</td>
+<td><code>site:instagram.com &quot;@gmail.com&quot;</code> dork</td>
+<td>Public email from bio</td>
+</tr>
+<tr>
+<td>PDF Directories</td>
+<td><code>filetype:pdf</code> dork</td>
+<td>Staff lists, faculty directories</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="what-weve-improved-before-vs-after">What We've Improved (Before vs After)</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Before</th>
+<th>After</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scraper tiers</td>
+<td>1 (requests only)</td>
+<td>5 (Tinyfish → curl_cffi → Camoufox → Playwright → BS4)</td>
+</tr>
+<tr>
+<td>User agents</td>
+<td>1 fixed</td>
+<td>5 rotating</td>
+</tr>
+<tr>
+<td>Retries</td>
+<td>1 attempt</td>
+<td>3 with Poisson backoff</td>
+</tr>
+<tr>
+<td>BS4 extraction</td>
+<td>Basic cleanup</td>
+<td>7-layer deep extraction</td>
+</tr>
+<tr>
+<td>Processing</td>
+<td>Sequential (1 site at a time)</td>
+<td>3 parallel workers</td>
+</tr>
+<tr>
+<td>Duplicate detection</td>
+<td>URL string only</td>
+<td>Root domain dedup</td>
+</tr>
+<tr>
+<td>Same company leads</td>
+<td>Multiple counted</td>
+<td>1 best contact kept</td>
+</tr>
+<tr>
+<td>LLM extraction</td>
+<td><code>with_structured_output</code> (silent fails)</td>
+<td>Manual JSON parsing</td>
+</tr>
+<tr>
+<td>Query generation</td>
+<td>Always &quot;B2B startup&quot; framing</td>
+<td>Respects exact user input</td>
+</tr>
+<tr>
+<td>Email validation</td>
+<td>Loose regex (caught filenames)</td>
+<td>Strict + throwaway filter</td>
+</tr>
+<tr>
+<td>Obfuscated emails</td>
+<td>Not handled</td>
+<td>Fixed automatically</td>
+</tr>
+<tr>
+<td>Lead sources</td>
+<td>Company websites only</td>
+<td>7 sources</td>
+</tr>
+<tr>
+<td>Blocked sites (403)</td>
+<td>Failed permanently</td>
+<td>Camoufox/curl_cffi bypass</td>
+</tr>
+<tr>
+<td>JS-rendered pages</td>
+<td>Empty result</td>
+<td>Playwright renders JS</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="linkedin--honest-status">LinkedIn — Honest Status</h2>
+<p><strong>What you get via X-Ray:</strong></p>
+<ul>
+<li>✅ Full Name</li>
+<li>✅ Job Title</li>
+<li>✅ Company Name</li>
+<li>✅ LinkedIn Profile URL</li>
+<li>⚠️ Email — only if publicly listed (~10-15% of profiles)</li>
+</ul>
+<p><strong>Why direct LinkedIn scraping is not possible:</strong></p>
+<ul>
+<li>LinkedIn uses behavioral analysis + IP reputation + login walls</li>
+<li>Even paid tools like PhantomBuster get banned regularly</li>
+<li>The X-Ray approach searches Google's cached index of public profiles</li>
+<li>Zero LinkedIn contact → zero ban risk</li>
+</ul>
+<p><strong>Workaround for missing emails:</strong>
+When email is not on LinkedIn profile, the system uses the company name to scrape the company's official website and find the email there — which happens automatically in Stage 2.</p>
+<hr>
+<h2 id="key-differentiators-vs-competitors">Key Differentiators vs Competitors</h2>
+<h3 id="vs-apolloio--hunterio--zoominfo">vs Apollo.io / Hunter.io / ZoomInfo</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Apollo.io</th>
+<th>RGTVetrex</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cost per lead</td>
+<td>$0.10 - $0.50</td>
+<td>Near zero (API costs only)</td>
+</tr>
+<tr>
+<td>Email sending</td>
+<td>Separate tool needed</td>
+<td>Built-in</td>
+</tr>
+<tr>
+<td>Personalization</td>
+<td>Template-based</td>
+<td>AI-written per person</td>
+</tr>
+<tr>
+<td>Human approval</td>
+<td>Not available</td>
+<td>Full approval gate</td>
+</tr>
+<tr>
+<td>Lead memory</td>
+<td>Basic CRM</td>
+<td>Neo4j graph (permanent)</td>
+</tr>
+<tr>
+<td>Custom sources</td>
+<td>No</td>
+<td>Reddit, Quora, PDFs, X-Ray</td>
+</tr>
+</tbody>
+</table>
+<h3 id="vs-manual-outreach">vs Manual Outreach</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Manual</th>
+<th>RGTVetrex</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time per day</td>
+<td>2-3 hours</td>
+<td>10 minutes (just review)</td>
+</tr>
+<tr>
+<td>Leads per day</td>
+<td>20-30</td>
+<td>Up to 100</td>
+</tr>
+<tr>
+<td>Duplicates</td>
+<td>Common</td>
+<td>Zero (Neo4j memory)</td>
+</tr>
+<tr>
+<td>Email quality</td>
+<td>Variable</td>
+<td>AI-personalized always</td>
+</tr>
+<tr>
+<td>Follow-ups</td>
+<td>Easy to forget</td>
+<td>Auto-scheduled</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="roi-summary">ROI Summary</h2>
+<ul>
+<li><strong>Setup time:</strong> 10 minutes per campaign</li>
+<li><strong>Review time:</strong> 5-10 minutes (human approval gate)</li>
+<li><strong>Cost:</strong> API costs only (LLMs mostly free tier)</li>
+<li><strong>Output:</strong> Up to 100 qualified leads/day with personalized emails ready to send</li>
+<li><strong>No per-lead pricing</strong> — unlike Apollo ($0.10-0.50/lead), costs stay flat regardless of volume</li>
+</ul>
+<hr>
+<h2 id="running-the-system">Running the System</h2>
+<p><strong>Backend:</strong></p>
+<pre class="hljs"><code><div>cd lead-outbound-engine
+venv\Scripts\activate
+uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+</div></code></pre>
+<p><strong>Frontend:</strong></p>
+<pre class="hljs"><code><div>cd lead-outbound-engine\frontend-web
+npm run dev
+</div></code></pre>
+<p><strong>URLs:</strong></p>
+<ul>
+<li>Backend API: <code>http://localhost:8000</code></li>
+<li>Frontend Dashboard: <code>http://localhost:5173</code></li>
+<li>API Docs: <code>http://localhost:8000/docs</code></li>
+</ul>
+<hr>
+<p><em>Built by Raghvendra Goyal — RGTVetrex</em>
+<em>Version: July 2026</em></p>
+
+</body>
+</html>

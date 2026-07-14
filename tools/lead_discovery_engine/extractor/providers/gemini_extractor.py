@@ -66,8 +66,19 @@ class GeminiExtractor(AIExtractor):
                 if "contacts" in data:
                     for contact in data["contacts"]:
                         if isinstance(contact, dict) and contact.get("email"):
-                            if "," in contact["email"]:
-                                contact["email"] = contact["email"].split(",")[0].strip()
+                            email = contact["email"]
+                            # Fix comma-separated emails
+                            if "," in email:
+                                email = email.split(",")[0].strip()
+                            # Fix obfuscated emails: name [at] domain [dot] com
+                            import re as _re
+                            email = _re.sub(r'\s*[\[\(]at[\]\)]\s*', '@', email, flags=_re.IGNORECASE)
+                            email = _re.sub(r'\s*[\[\(]dot[\]\)]\s*', '.', email, flags=_re.IGNORECASE)
+                            email = email.strip()
+                            # Null out anything that still isn't a valid-looking email
+                            if '@' not in email or '.' not in email.split('@')[-1]:
+                                email = None
+                            contact["email"] = email
 
                 return Lead.model_validate(data)
             except json.JSONDecodeError as e:

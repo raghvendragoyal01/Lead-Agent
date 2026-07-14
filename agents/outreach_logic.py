@@ -1,3 +1,5 @@
+import re
+import json
 import time
 from typing import Dict, Any
 
@@ -12,14 +14,7 @@ from memory.qdrant_client import QdrantMemoryClient
 from tools.email_sender import EmailSender
 
 
-class DraftedEmail(BaseModel):
-    subject: str = Field(description="A catchy, personalized subject line (max 6 words).")
-    body: str = Field(description="The full email body. Must be professional, concise, and hyper-personalized.")
-    confidence_score: float = Field(description="Score (0.0-1.0) on how confident the AI is about this draft.")
-
-
 llm = get_llm(temperature=0.7)
-structured_llm = llm.with_structured_output(DraftedEmail)
 qdrant_memory = QdrantMemoryClient()
 neo4j_memory = Neo4jMemoryClient()
 email_sender = EmailSender()
@@ -34,21 +29,20 @@ email_prompt = ChatPromptTemplate.from_messages([
     (
         "system",
         """You are an elite B2B Outbound Sales Agent.
-Your goal is to write a highly professional, polite, and value-driven cold email to a prospect.
+Write a professional, polite, value-driven cold email to the prospect.
 
 CRITICAL RULES:
-1. Tone must be strictly professional and conversational. Avoid aggressive "salesy" or "marketing" language completely. Do not use exclamation marks excessively.
-2. Focus on establishing a genuine connection and offering value based on their company description.
-3. Personalize the email using the prospect's Name, Job Title, and Company.
-4. Keep it under 100 words. No fluff.
-5. End with a clear, low-friction and polite question.
-6. Do NOT include a sign-off or signature (e.g. "Best regards," or your name) at the end. The system will append the signature automatically.
+1. Tone: strictly professional and conversational. No aggressive sales language. No exclamation marks.
+2. Personalize using their Name, Job Title, and Company.
+3. Keep it under 100 words. No fluff.
+4. End with a clear, low-friction question.
+5. Do NOT include a sign-off or signature.
+6. Return ONLY a JSON object with keys "subject" and "body". No markdown, no explanation.
 """,
     ),
     (
         "human",
-        """
- Prospect Details:
+        """Prospect Details:
 Name: {name}
 Role: {role}
 Company: {company}
@@ -57,38 +51,54 @@ Company Description: {company_description}
 Context from Vector DB:
 {rag_context}
 
-Draft the email.
-""",
+Return JSON: {{"subject": "...", "body": "..."}}""",
     ),
 ])
 
-email_chain = email_prompt | structured_llm
+email_chain = email_prompt | llm
+
+
+def _parse_email_draft(response_text: str) -> dict:
+    """Parse LLM JSON response into subject/body dict."""
+    response_text = re.sub(r'<think>.*?</think>', '', response_text, flags=re.DOTALL).strip()
+    response_text = response_text.replace("```json", "").replace("```", "").strip()
+    response_text = re.sub(r',\s*([\]}])', r'\1', response_text)
+    json_match = re.search(r'(\{.*\})', response_text, re.DOTALL)
+    if json_match:
+        response_text = json_match.group(1)
+    return json.loads(response_text)
 
 
 def generate_draft_options(lead: dict) -> list[str]:
-    industry = lead.get("industry")
-    if not industry or str(industry).strip() == "":
-        industry = "Technology"
-        
+    industry = lead.get("industry") or "Technology"
+
     rag_context = retrieve_successful_templates(industry)
     options = []
 
-    for _ in range(1): # Generate exactly 1 option as requested
-        try:
-            # We can vary temperature slightly to get different results, but since we instantiate LLM with 0.7 it should naturally vary
-            draft = email_chain.invoke({
-                "name": lead.get("full_name", "there"),
-                "role": lead.get("job_title", "your role"),
-                "company": lead.get("company_name", "your company"),
-                "company_description": lead.get("company_description", "No description provided."),
-                "rag_context": rag_context,
-            })
-            # Hardcode signature
-            signature = "\n\nBest regards,\nCTO, Raghvendra Goyal"
-            options.append(f"Subject: {draft.subject}\n\n{draft.body}{signature}")
-        except Exception as e:
-            print(f"[Drafter] Error drafting email for {lead.get('email')}: {e}")
-            
+    try:
+        response = email_chain.invoke({
+            "name": lead.get("full_name", "there"),
+            "role": lead.get("job_title", "your role"),
+            "company": lead.get("company_name", "your company"),
+            "company_description": lead.get("company_description", "No description provided."),
+            "rag_context": rag_context,
+        })
+        draft = _parse_email_draft(response.content)
+        subject = draft.get("subject", "Following Up")
+        body = draft.get("body", "")
+        signature = "\n\nBest regards,\nCTO, Raghvendra Goyal"
+        options.append(f"Subject: {subject}\n\n{body}{signature}")
+    except Exception as e:
+        print(f"[Drafter] Error drafting email for {lead.get('email')}: {e}")
+        # Fallback plain draft so the lead isn't lost
+        options.append(
+            f"Subject: Quick question for {lead.get('company_name', 'your team')}\n\n"
+            f"Hi {lead.get('full_name', 'there')},\n\n"
+            f"I came across {lead.get('company_name', 'your company')} and wanted to reach out. "
+            f"Would you be open to a quick 15-minute chat?\n\n"
+            f"Best regards,\nCTO, Raghvendra Goyal"
+        )
+
     return options
 
 def drafter_node(state: CampaignState) -> Dict[str, Any]:

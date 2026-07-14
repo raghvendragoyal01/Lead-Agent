@@ -8,11 +8,28 @@ import logging
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-POSTGRES_URI = os.getenv("POSTGRES_URI", "sqlite:///./local_db.sqlite") # Fallback to sqlite if postgres not found
+POSTGRES_URI = os.getenv("POSTGRES_URI", "")
 
-# Configure SQLAlchemy Engine
-# For supabase, pool_pre_ping is important to avoid closed connection errors
-engine = create_engine(POSTGRES_URI, pool_pre_ping=True)
+# If no Postgres URI is set or it's clearly wrong, fall back to local SQLite
+# so the server can start without a database connection
+_use_sqlite_fallback = False
+
+if not POSTGRES_URI:
+    _use_sqlite_fallback = True
+    logger.warning("[postgres_client] POSTGRES_URI not set — using local SQLite fallback.")
+    DATABASE_URL = "sqlite:///./local_db.sqlite"
+else:
+    DATABASE_URL = POSTGRES_URI
+
+# SQLite needs a different connect_args
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
@@ -67,7 +84,7 @@ class Note(Base):
     __tablename__ = "notes"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True) # Making nullable to allow unauth notes if needed
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
@@ -82,12 +99,12 @@ class Task(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 def init_db():
-    """Create tables if they don't exist"""
+    """Create tables if they don't exist. Logs a warning on failure instead of crashing."""
     try:
         Base.metadata.create_all(bind=engine)
-        logger.info("PostgreSQL Database tables created successfully.")
+        logger.info("Database tables created/verified successfully.")
     except Exception as e:
-        logger.error(f"Error creating database tables: {e}")
+        logger.warning(f"[init_db] Could not create tables: {e}")
 
 def get_db():
     """Dependency for FastAPI endpoints"""

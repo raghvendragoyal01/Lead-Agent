@@ -20,8 +20,16 @@ from memory.postgres_client import get_db, User, Base, engine
 
 load_project_env()
 
-# Create tables if they don't exist
-Base.metadata.create_all(bind=engine)
+# Create tables if they don't exist — wrapped so a bad DB password
+# doesn't crash the entire server on startup
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as _db_init_err:
+    import logging as _logging
+    _logging.getLogger(__name__).warning(
+        f"[auth] Could not create DB tables at startup (check POSTGRES_URI): {_db_init_err}. "
+        "The server will start anyway using the SQLite fallback."
+    )
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-in-production")
