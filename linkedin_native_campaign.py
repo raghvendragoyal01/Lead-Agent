@@ -77,33 +77,113 @@ VISA_KEYWORDS = ["H1B", "H-1B", "OPT", "CPT", "EAD", "Green Card", "US Citizen",
 # ============================================================
 # EXTRACTOR & HELPER FUNCTIONS
 # ============================================================
+
+def extract_name(url, page_text):
+    """Extracts a clean name from the LinkedIn page title / heading or falls back to URL slug."""
+    # Try to find name in page heading first
+    heading_match = re.search(r"^([A-Z][a-z]+(?: [A-Z][a-z]+){1,3})", page_text.strip())
+    if heading_match:
+        candidate = heading_match.group(1).strip()
+        if len(candidate.split()) >= 2:
+            return candidate
+    # Fallback: slug from URL
+    match = re.search(r"linkedin\.com/in/([^/?#]+)", url)
+    if match:
+        slug = match.group(1)
+        # Remove trailing digits / IDs
+        slug = re.sub(r'-[a-f0-9]{6,}$', '', slug)
+        return slug.replace("-", " ").title()
+    return "Unknown"
+
 def extract_email(text):
+    """Extract email including obfuscated formats like 'name at domain dot com'."""
+    # Direct format
     emails = re.findall(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", text)
     valid = [e for e in emails if not re.search(r"\.(png|jpg|gif|css|js)$", e, re.IGNORECASE)]
-    return valid[0] if valid else "N/A"
+    if valid:
+        return valid[0]
+    # Obfuscated: "name at domain dot com"
+    obf = re.search(
+        r"([A-Za-z0-9._%+\-]+)\s+(?:at|AT)\s+([A-Za-z0-9.\-]+)\s+(?:dot|DOT)\s+([A-Za-z]{2,})",
+        text
+    )
+    if obf:
+        return f"{obf.group(1)}@{obf.group(2)}.{obf.group(3)}"
+    return "N/A"
 
 def extract_contact(text):
-    phone = re.search(r"(?:\+91[\s\-]?)?[6-9]\d{9}|\+1[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{4}", text)
+    phone = re.search(
+        r"(?:\+91[\s\-]?)?[6-9]\d{9}|"
+        r"\+1[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{4}|"
+        r"\(\d{3}\)\s?\d{3}[\-\s]?\d{4}",
+        text
+    )
     return phone.group().strip() if phone else "N/A"
 
 def extract_technologies(text):
-    found = [tech for tech in TECH_KEYWORDS if tech.lower() in text.lower()]
+    combined = text.lower()
+    found = [tech for tech in TECH_KEYWORDS if tech.lower() in combined]
     return ", ".join(found) if found else "N/A"
 
 def extract_visa(text):
     for visa in VISA_KEYWORDS:
         if visa.upper() in text.upper():
             return visa
-    return "N/A"
+    return "OPT / Seeking Sponsor"
 
 def extract_year(text):
+    """Extract graduation year, preferring recent years (2024-2027)."""
+    combined = text.upper()
+    # Prefer recent grad years first
+    match = re.search(r"\b(202[4-7])\b", combined)
+    if match:
+        return match.group(1)
+    # Fallback short form: '24, '25, '26, '27
+    match_short = re.search(r"'(2[4-7])\b", combined)
+    if match_short:
+        return "20" + match_short.group(1)
+    # Broader fallback
     years = re.findall(r"\b(20(?:1[5-9]|2[0-7]))\b", text)
     return sorted(set(years), reverse=True)[0] if years else "N/A"
 
+def verify_strict_postgrad(text):
+    """
+    Strictly validates the candidate holds or is pursuing a Master's / postgraduate degree.
+    Returns (is_postgrad: bool, degree_label: str)
+    Merged from feature/linkedin-scraper branch.
+    """
+    combined = text.upper()
+    masters_indicators = [
+        "MS IN", "M.S. IN", "M.S IN", "MASTER OF", "MASTER'S", "MASTER DEGR",
+        "MBA", "MEM ", "MENG", "M.ENG", "POSTGRADUATE", "POST-GRADUATE",
+        "MS GRADUATE", "MS GRAD", "MASTER GRADUATE", "MASTER'S GRADUATE",
+        "MASTER OF SCIENCE", "MASTER OF ENGINEERING", "MASTER OF BUSINESS"
+    ]
+    pattern_match = re.search(r"\b(MS|M\.S\.|MASTER|MBA|MEM|MENG|M\.ENG)\b", combined)
+    has_masters = any(sig in combined for sig in masters_indicators)
+
+    if not (has_masters or pattern_match):
+        return False, None
+
+    degree = "Master's Degree"
+    if "MBA" in combined:
+        degree = "MBA"
+    elif "MASTER OF SCIENCE" in combined or "MS IN" in combined or "M.S." in combined:
+        degree = "Master of Science (MS)"
+    elif "MASTER OF ENGINEERING" in combined or "MENG" in combined or "M.ENG" in combined:
+        degree = "Master of Engineering (M.Eng)"
+    elif "MEM" in combined:
+        degree = "Master of Engineering Management"
+    return True, degree
+
 def extract_university(text):
     """
-    Extracts and validates a US university from profile text matching the US_UNIVERSITIES whitelist.
+    Extracts US university from profile text.
+    First checks against the us_universities.json whitelist.
+    Falls back to hardcoded known US university shortcuts.
+    Finally falls back to regex pattern for university lines.
     """
+    # 1. Whitelist match
     for uni in US_UNIVERSITIES:
         if not uni or not isinstance(uni, str):
             continue
@@ -111,12 +191,53 @@ def extract_university(text):
         pattern = rf"\b{re.escape(uni_clean)}\b"
         if re.search(pattern, text, re.IGNORECASE):
             return uni_clean
-    return "N/A"
 
-def extract_name(url, page_text):
-    match = re.search(r"linkedin\.com/in/([^/?#]+)", url)
-    slug = match.group(1).replace("-", " ").title() if match else "Unknown"
-    return slug
+    # 2. Hardcoded shortcode overrides (from feature/linkedin-scraper)
+    text_upper = text.upper()
+    shortcuts = {
+        "NORTHEASTERN": "Northeastern University",
+        "ARIZONA STATE": "Arizona State University",
+        "ASU": "Arizona State University",
+        "NYU": "New York University",
+        "NEW YORK UNIVERSITY": "New York University",
+        "STANFORD": "Stanford University",
+        "USC": "University of Southern California",
+        "SJSU": "San Jose State University",
+        "SAN JOSE STATE": "San Jose State University",
+        "PACE": "Pace University",
+        "STEVENS": "Stevens Institute of Technology",
+        "GEORGIA TECH": "Georgia Institute of Technology",
+        "CMU": "Carnegie Mellon University",
+        "CARNEGIE MELLON": "Carnegie Mellon University",
+        "UT DALLAS": "University of Texas at Dallas",
+        "UTD": "University of Texas at Dallas",
+        "NJIT": "New Jersey Institute of Technology",
+        "GEORGE MASON": "George Mason University",
+    }
+    for keyword, full_name in shortcuts.items():
+        if keyword in text_upper:
+            return full_name
+
+    # 3. Regex fallback - look for any line containing university/college keywords
+    us_acronyms = ["MIT", "UCLA", "SUNY", "CUNY", "SDSU", "UMBC", "UMD", "UIUC", "UIC", "SJSU"]
+    indian_keywords = [
+        "Delhi", "Mumbai", "Pune", "Anna", "Amity", "SRM", "VIT", "BITS", "IIT", "NIT",
+        "Manipal", "JNTU", "KIIT", "Chandigarh", "Osmania", "Madras", "Kharagpur",
+        "Kanpur", "Roorkee", "Guwahati", "Indore", "Bangalore", "Hyderabad",
+        "Noida", "Vellore", "Pilani", "Symbiosis", "NMIMS", "Jadavpur", "Sathyabama",
+        "Banasthali", "Galgotias", "India"
+    ]
+    segments = re.split(r'[,|•\n]', text)
+    for seg in segments:
+        seg = seg.strip()
+        has_uni_word = re.search(r"\b(University|College|Institute of Technology|Polytechnic)\b", seg, re.IGNORECASE)
+        has_acronym = any(re.search(rf"\b{acr}\b", seg) for acr in us_acronyms)
+        if (has_uni_word or has_acronym) and 10 < len(seg) < 100:
+            is_indian = any(re.search(rf"\b{ind}\b", seg, re.IGNORECASE) for ind in indian_keywords)
+            if not is_indian:
+                return seg.strip()
+
+    return "N/A"
 
 def extract_summary(page_text):
     clean_text = re.sub(r'\s+', ' ', page_text).strip()
@@ -403,7 +524,7 @@ def run_campaign(keyword_query, num_leads=5, output_file="campaign_results.csv")
         print("\n🕵️‍♂️ Starting Profile Data Extraction...")
         all_candidates = []
         file_exists = os.path.exists(output_file)
-        fieldnames = ["name", "summary", "contact", "email", "technology", "visa", "year", "university", "posts", "linkedin_url", "scraped_at"]
+        fieldnames = ["name", "degree", "summary", "contact", "email", "technology", "visa", "year", "university", "posts", "linkedin_url", "scraped_at"]
 
         if not file_exists:
             try:
@@ -464,9 +585,12 @@ def run_campaign(keyword_query, num_leads=5, output_file="campaign_results.csv")
 
                     university = extract_university(page_text)
                     technology = extract_technologies(page_text)
+                    is_postgrad, degree_label = verify_strict_postgrad(page_text)
 
                     if university == "N/A":
-                        print(f"   ⏭️ SKIPPING: Failed requirements check (No valid US University found in whitelist).")
+                        print(f"   ⏭️ SKIPPING: No valid US University found in whitelist.")
+                    elif not is_postgrad:
+                        print(f"   ⏭️ SKIPPING: No Master's / postgraduate degree signal found in profile.")
                     else:
                         email = extract_email(page_text)
                         posts_content = "N/A"
@@ -482,6 +606,7 @@ def run_campaign(keyword_query, num_leads=5, output_file="campaign_results.csv")
 
                         candidate = {
                             "name": extract_name(url, page_text),
+                            "degree": degree_label,
                             "summary": extract_summary(page_text),
                             "contact": extract_contact(page_text),
                             "email": email,
@@ -533,6 +658,6 @@ def run_campaign(keyword_query, num_leads=5, output_file="campaign_results.csv")
 # ============================================================
 if __name__ == "__main__":
     SEARCH_QUERY = '("MS Graduate" OR "Master\'s Graduate") AND ("Open to Work" OR "OPT") AND ("United States" OR "USA")'
-    LEAD_COUNT = 5  
-    
+    LEAD_COUNT = 5  # Run 4x/day safely (~140 leads/day)
+
     run_campaign(keyword_query=SEARCH_QUERY, num_leads=LEAD_COUNT)
