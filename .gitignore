@@ -1,0 +1,34 @@
+# Results & data (don't commit scraped data)
+campaign_results.csv
+verified_students.csv
+free_campaign_results.csv
+
+# Browser session directories (contain cookies / auth data - NEVER commit)
+linkedin_session/
+linkedin_session_1/
+linkedin_session_2/
+linkedin_session_3/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables (contains secrets)
+.env
+
+# Large zip files & local-only folders
+*.zip
+CRM_NEW/
+CRM_NEW (2)/
+Lead-Agent-feature-linkedin-scraper SS/
+docs/
+lead-outbound-engine/
+
+# Branding / local assets
+logo.jpeg
+logo.jpg
+RGTVetrex_Brochure.html
+
+# IDE / agents
+.agents/

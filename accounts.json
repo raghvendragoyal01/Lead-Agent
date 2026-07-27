@@ -1,0 +1,23 @@
+[
+  {
+    "id": "Account 1",
+    "username": "",
+    "password": "",
+    "session_dir": "linkedin_session_1",
+    "li_at": "AQEDAWtxABIDGhZhAAABn6T4uJMAAAGfyQU8k00AwecNQthZMqaGySpmoN3TZaVlZnkvwB1PzTG5uSoXVGlSgX45xWO5yu8DRjzx382cONrnYMOf16ctpfA-yefYGZGbxGuDt701rPsOOsRkMERNpezW"
+  },
+  {
+    "id": "Account 2",
+    "username": "",
+    "password": "",
+    "session_dir": "linkedin_session_2",
+    "li_at": ""
+  },
+  {
+    "id": "Account 3",
+    "username": "",
+    "password": "",
+    "session_dir": "linkedin_session_3",
+    "li_at": ""
+  }
+]
