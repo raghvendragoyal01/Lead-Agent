@@ -1,7 +1,11 @@
+import sys
 import os
 import json
 import time
 from playwright.sync_api import sync_playwright
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
 
 ACCOUNTS_JSON_PATH = "accounts.json"
 

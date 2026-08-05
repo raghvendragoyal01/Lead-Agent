@@ -1,3 +1,4 @@
+import sys
 import time
 import random
 import re
@@ -7,6 +8,9 @@ import json
 import urllib.parse
 from datetime import datetime
 from playwright.sync_api import sync_playwright
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
 
 # ============================================================
 # UNIVERSITY WHITELIST LOADING
@@ -124,6 +128,20 @@ def extract_technologies(text):
     combined = text.lower()
     found = [tech for tech in TECH_KEYWORDS if tech.lower() in combined]
     return ", ".join(found) if found else "N/A"
+
+def extract_resume_links(text):
+    """Extracts links/references to Resumes or CVs (Google Drive, Dropbox, Notion, PDFs, Canva, etc.)."""
+    resume_links = re.findall(
+        r"(https?://(?:drive\.google\.com|docs\.google\.com|dropbox\.com|notion\.site|cutt\.ly|bit\.ly|canva\.com)[^\s\)]+|[^\s\)]+\.pdf)",
+        text,
+        re.IGNORECASE
+    )
+    if resume_links:
+        return ", ".join(sorted(set(resume_links)))
+    # Check text reference
+    if re.search(r"\b(resume|cv|curriculum vitae)\b", text, re.IGNORECASE):
+        return "Resume mentioned in profile"
+    return "N/A"
 
 def extract_visa(text):
     for visa in VISA_KEYWORDS:
@@ -458,63 +476,83 @@ def run_campaign(keyword_query, num_leads=5, output_file="campaign_results.csv")
         # 1. SEARCH AND COLLECT URLS
         # ----------------------------------------------------
         print("\n🔎 Initiating LinkedIn Native Search...")
-        encoded_query = urllib.parse.quote(keyword_query)
-        current_page = 1
+        # ----------------------------------------------------
+        # 1. SEARCH AND COLLECT URLS (MULTI-QUERY TARGETING EMAILS & RESUMES)
+        # ----------------------------------------------------
+        print("\n🔎 Initiating High-Yield LinkedIn Native Search...")
         
-        while len(collected_urls) < num_leads and account_idx < len(accounts):
-            search_url = f"https://www.linkedin.com/search/results/people/?keywords={encoded_query}&page={current_page}"
-            print(f"   -> [{current_account.get('id')}] Scraping search page {current_page}...")
-            
-            try:
-                page.goto(search_url, wait_until="domcontentloaded")
-                human_delay(4, 7)
-                
-                # Check for rate limit or block
-                limited, reason = is_rate_limited(page)
-                if limited:
-                    print(f"   ⚠️ RATE LIMIT DETECTED on '{current_account.get('id')}': {reason}")
-                    if not rotate_account():
-                        break
-                    continue # Retry search page with new account
+        # High-yield search queries targeting candidates with public emails, contacts, or resumes
+        if isinstance(keyword_query, list):
+            target_queries = keyword_query
+        elif keyword_query and "gmail" in keyword_query.lower():
+            target_queries = [keyword_query]
+        else:
+            target_queries = [
+                '("MS" OR "Master" OR "MBA" OR "M.S.") AND ("United States" OR "USA") AND ("@gmail.com" OR "gmail" OR "email" OR "contact")',
+                '("MS" OR "Master" OR "Postgraduate") AND ("Open to Work" OR "OPT") AND ("United States" OR "USA")',
+                '("MS Graduate" OR "Master\'s Graduate") AND ("United States" OR "USA") AND ("email" OR "contact")',
+                '("MS in" OR "Master of Science") AND ("OPT" OR "Open to Work") AND ("USA" OR "United States")'
+            ]
 
-                for _ in range(3):
-                    page.evaluate("window.scrollBy(0, 500);")
-                    human_delay(1, 2)
-                
-                links = page.locator('a[href*="/in/"]').all()
-                found_on_page = 0
-                
-                for link in links:
-                    href = link.get_attribute("href")
-                    if href:
-                        clean_url = href.split("?")[0].rstrip("/")
-                        if "linkedin.com" not in clean_url:
-                            clean_url = "https://www.linkedin.com" + clean_url
-                            
-                        if clean_url not in collected_urls and clean_url not in seen_urls and len(collected_urls) < num_leads:
-                            collected_urls.append(clean_url)
-                            found_on_page += 1
+        for q_idx, query_str in enumerate(target_queries, 1):
+            if len(collected_urls) >= num_leads or account_idx >= len(accounts):
+                break
 
-                print(f"      Found {found_on_page} NEW profiles on page {current_page}. (Total Queue: {len(collected_urls)}/{num_leads})")
+            print(f"\n🎯 [Query {q_idx}/{len(target_queries)}] Searching: '{query_str}'")
+            encoded_query = urllib.parse.quote(query_str)
+            current_page = 1
 
-                if found_on_page == 0:
+            while current_page <= 5 and len(collected_urls) < num_leads and account_idx < len(accounts):
+                search_url = f"https://www.linkedin.com/search/results/people/?keywords={encoded_query}&page={current_page}"
+                print(f"   -> [{current_account.get('id')}] Scraping search page {current_page}...")
+                
+                try:
+                    page.goto(search_url, wait_until="domcontentloaded")
                     human_delay(3, 6)
-                    if current_page > 10:
-                        print("   ⚠️ Not finding new profiles. Stopping search phase.")
+                    
+                    limited, reason = is_rate_limited(page)
+                    if limited:
+                        print(f"   ⚠️ RATE LIMIT DETECTED on '{current_account.get('id')}': {reason}")
+                        if not rotate_account():
+                            break
+                        continue
+
+                    for _ in range(3):
+                        page.evaluate("window.scrollBy(0, 500);")
+                        human_delay(1, 2)
+                    
+                    links = page.locator('a[href*="/in/"]').all()
+                    found_on_page = 0
+                    
+                    for link in links:
+                        href = link.get_attribute("href")
+                        if href:
+                            clean_url = href.split("?")[0].rstrip("/")
+                            if "linkedin.com" not in clean_url:
+                                clean_url = "https://www.linkedin.com" + clean_url
+                                
+                            if clean_url not in collected_urls and clean_url not in seen_urls and len(collected_urls) < num_leads:
+                                collected_urls.append(clean_url)
+                                found_on_page += 1
+
+                    print(f"      Found {found_on_page} NEW profiles on page {current_page}. (Total Queue: {len(collected_urls)}/{num_leads})")
+
+                    if found_on_page == 0:
+                        human_delay(2, 4)
                         break
 
-                current_page += 1
-                
-            except Exception as e:
-                print(f"   ❌ Error during search: {e}")
-                limited, reason = is_rate_limited(page)
-                if limited:
-                    print(f"   ⚠️ RATE LIMIT DETECTED on '{current_account.get('id')}': {reason}")
-                    if not rotate_account():
+                    current_page += 1
+                    
+                except Exception as e:
+                    print(f"   ❌ Error during search: {e}")
+                    limited, reason = is_rate_limited(page)
+                    if limited:
+                        print(f"   ⚠️ RATE LIMIT DETECTED on '{current_account.get('id')}': {reason}")
+                        if not rotate_account():
+                            break
+                        continue
+                    else:
                         break
-                    continue
-                else:
-                    break
 
         print(f"\n✅ Finished searching. Proceeding to extract {len(collected_urls)} profiles.")
 
@@ -524,7 +562,7 @@ def run_campaign(keyword_query, num_leads=5, output_file="campaign_results.csv")
         print("\n🕵️‍♂️ Starting Profile Data Extraction...")
         all_candidates = []
         file_exists = os.path.exists(output_file)
-        fieldnames = ["name", "degree", "summary", "contact", "email", "technology", "visa", "year", "university", "posts", "linkedin_url", "scraped_at"]
+        fieldnames = ["name", "degree", "summary", "contact", "email", "technology", "visa", "year", "university", "resume", "posts", "linkedin_url", "scraped_at"]
 
         if not file_exists:
             try:
@@ -553,7 +591,7 @@ def run_campaign(keyword_query, num_leads=5, output_file="campaign_results.csv")
                         print(f"   ⚠️ RATE LIMIT DETECTED on '{current_account.get('id')}': {reason}")
                         if not rotate_account():
                             break
-                        continue # Retry same profile with rotated account
+                        continue
 
                     for _ in range(2):
                         page.evaluate("window.scrollBy(0, document.body.scrollHeight/4);")
@@ -593,6 +631,7 @@ def run_campaign(keyword_query, num_leads=5, output_file="campaign_results.csv")
                         print(f"   ⏭️ SKIPPING: No Master's / postgraduate degree signal found in profile.")
                     else:
                         email = extract_email(page_text)
+                        resume_info = extract_resume_links(page_text)
                         posts_content = "N/A"
 
                         # IFF email could not be retrieved from main profile, read posts!
@@ -614,6 +653,7 @@ def run_campaign(keyword_query, num_leads=5, output_file="campaign_results.csv")
                             "visa": extract_visa(page_text),
                             "year": extract_year(page_text),
                             "university": university,
+                            "resume": resume_info,
                             "posts": posts_content,
                             "linkedin_url": url,
                             "scraped_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -657,7 +697,5 @@ def run_campaign(keyword_query, num_leads=5, output_file="campaign_results.csv")
 # ENTRY POINT
 # ============================================================
 if __name__ == "__main__":
-    SEARCH_QUERY = '("MS Graduate" OR "Master\'s Graduate") AND ("Open to Work" OR "OPT") AND ("United States" OR "USA")'
-    LEAD_COUNT = 5  # Run 4x/day safely (~140 leads/day)
-
-    run_campaign(keyword_query=SEARCH_QUERY, num_leads=LEAD_COUNT)
+    LEAD_COUNT = 10  # Batch target per run
+    run_campaign(keyword_query=None, num_leads=LEAD_COUNT)
